@@ -15,6 +15,15 @@ English | **[中文](./README.md)**
 
 ---
 
+## Preview
+
+<!-- Replace with your screenshot paths -->
+![Hero Preview](./screenshots/hero.png)
+![Card Effects](./screenshots/cards.png)
+![PPT Slideshow](./screenshots/ppt.png)
+
+---
+
 ## Features
 
 - Particle animation background (interactive)

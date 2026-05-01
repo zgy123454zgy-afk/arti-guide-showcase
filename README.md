@@ -15,6 +15,15 @@
 
 ---
 
+## 效果预览
+
+<!-- 替换为你的截图路径 -->
+![首页预览](./screenshots/hero.png)
+![卡片效果](./screenshots/cards.png)
+![PPT展示](./screenshots/ppt.png)
+
+---
+
 ## 特性
 
 - 粒子动画背景（鼠标可交互）
