@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文物智鉴 · ArtiGuide | 多模态文物检索与数字人讲解系统</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #030307;
+            --bg-card: rgba(13, 13, 23, 0.6);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --accent-glow: #d4a843;
+            --accent-purple: #2e8b57;
+            --accent-jade: #3aaf7c;
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --font-main: 'Inter', -apple-system, sans-serif;
+            --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        /* =========================================
+           Cursor Glow
+           ========================================= */
+        .cursor-glow {
+            position: fixed;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(212,168,67,0.07) 0%, rgba(212,168,67,0.03) 30%, transparent 60%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+            transform: translate(-50%, -50%);
+            will-change: left, top;
+            transition: opacity 0.4s;
+            opacity: 0;
+        }
+
+        .cursor-glow.visible { opacity: 1; }
+
+        #tsparticles {
+            position: fixed; width: 100%; height: 100%;
+            top: 0; left: 0; z-index: 0; opacity: 0.4;
+        }
+
+        /* =========================================
+           Navigation
+           ========================================= */
+        nav {
+            position: fixed; top: 0; width: 100%; height: 72px;
+            padding: 0 5%;
+            background: rgba(3, 3, 7, 0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .logo {
+            font-size: 22px; font-weight: 800; letter-spacing: -1px;
+            background: linear-gradient(90deg, #fff 0%, var(--accent-glow) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a {
+            color: var(--text-secondary); text-decoration: none;
+            font-size: 14px; font-weight: 500; transition: color 0.3s; cursor: pointer;
+        }
+        .nav-links a:hover { color: var(--accent-glow); }
+
+        /* =========================================
+           Hero
+           ========================================= */
+        .hero {
+            position: relative; min-height: 90vh;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center; z-index: 1; padding: 0 20px;
+            overflow: hidden;
+        }
+
+        .hero-glow {
+            position: absolute; width: 500px; height: 500px;
+            background: var(--accent-purple);
+            filter: blur(180px); opacity: 0.12;
+            border-radius: 50%; z-index: -1; top: 15%;
+        }
+
+        /* Chinese decorative pattern */
+        .hero-pattern {
+            position: absolute;
+            width: 100%; height: 100%;
+            top: 0; left: 0;
+            pointer-events: none; z-index: -1;
+            opacity: 0.06;
+        }
+
+        .hero-pattern .line-group {
+            animation: patternFloat 20s ease-in-out infinite;
+        }
+
+        .hero-pattern .line-group:nth-child(2) {
+            animation-delay: -10s;
+            animation-duration: 25s;
+        }
+
+        @keyframes patternFloat {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.06; }
+            50% { transform: translateY(-20px) scale(1.02); opacity: 0.1; }
+        }
+
+        .hero h1 {
+            font-size: clamp(48px, 8vw, 96px);
+            font-weight: 800; letter-spacing: -0.05em;
+            line-height: 1.0; margin-bottom: 24px;
+            position: relative;
+        }
+
+        .hero h1 span {
+            display: block;
+            background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero h1 .highlight {
+            background: linear-gradient(90deg, var(--accent-glow), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(212, 168, 67, 0.5);
+        }
+
+        /* Hero Title Character Animation */
+        .hero h1 .char {
+            display: inline-block;
+            will-change: transform, opacity;
+        }
+
+        .hero p {
+            font-size: clamp(18px, 2vw, 22px);
+            color: var(--text-secondary);
+            max-width: 800px; margin-bottom: 48px;
+            opacity: 0; transform: translateY(30px);
+        }
+
+        .hero-stats {
+            display: flex; gap: 50px;
+            opacity: 0; transform: translateY(30px);
+        }
+
+        .hero-stat { text-align: center; }
+        .hero-stat .num {
+            font-size: 40px; font-weight: 800;
+            background: linear-gradient(90deg, var(--accent-glow), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+            min-width: 80px;
+        }
+        .hero-stat .label {
+            font-size: 14px; color: var(--text-secondary); margin-top: 4px;
+        }
+
+        .scroll-hint {
+            position: absolute; bottom: 40px;
+            display: flex; flex-direction: column; align-items: center;
+            gap: 8px; opacity: 0.5; cursor: pointer;
+        }
+        .scroll-hint span { font-size: 12px; color: var(--text-secondary); }
+        .scroll-hint .arrow {
+            width: 20px; height: 20px;
+            border-right: 2px solid var(--accent-glow);
+            border-bottom: 2px solid var(--accent-glow);
+            transform: rotate(45deg);
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: rotate(45deg) translateY(0); }
+            50% { transform: rotate(45deg) translateY(8px); }
+        }
+
+        /* =========================================
+           Highlights Banner
+           ========================================= */
+        .highlights-banner {
+            position: relative; z-index: 2;
+            border-top: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(3,3,7,0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            overflow: hidden;
+            padding: 16px 0;
+        }
+
+        .highlights-track {
+            display: flex; gap: 48px;
+            animation: scrollLeft 30s linear infinite;
+            white-space: nowrap;
+            width: max-content;
+        }
+
+        .highlights-track:hover { animation-play-state: paused; }
+
+        .highlight-item {
+            font-size: 15px; font-weight: 600;
+            color: var(--text-secondary);
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .highlight-item .dot {
+            width: 6px; height: 6px;
+            background: var(--accent-glow);
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(212,168,67,0.6);
+            flex-shrink: 0;
+        }
+
+        .highlight-item strong { color: var(--accent-glow); margin: 0 4px; }
+
+        @keyframes scrollLeft {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* =========================================
+           Tab Switcher
+           ========================================= */
+        .tab-bar-wrapper {
+            position: sticky; top: 72px; z-index: 100;
+            display: flex; justify-content: center;
+            padding: 20px 0 16px;
+            background: linear-gradient(180deg, rgba(3,3,7,0.95) 0%, rgba(3,3,7,0.7) 70%, transparent 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .tab-bar {
+            position: relative;
+            display: flex;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            padding: 4px;
+            gap: 2px;
+        }
+
+        .tab-slider {
+            position: absolute;
+            top: 4px; left: 4px;
+            width: calc(50% - 4px); height: calc(100% - 8px);
+            background: linear-gradient(135deg, rgba(212,168,67,0.2), rgba(46,139,87,0.2));
+            border: 1px solid rgba(212,168,67,0.3);
+            border-radius: 50px;
+            transition: transform 0.45s var(--ease-out-expo);
+            box-shadow: 0 0 20px rgba(212,168,67,0.15);
+        }
+
+        .tab-bar.slide-right .tab-slider { transform: translateX(100%); }
+
+        .tab-btn {
+            position: relative; z-index: 1;
+            background: transparent; border: none;
+            color: var(--text-secondary);
+            padding: 14px 36px; border-radius: 50px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: color 0.35s ease;
+            white-space: nowrap;
+            font-family: var(--font-main);
+        }
+
+        .tab-btn.active { color: #fff; }
+        .tab-btn:hover:not(.active) { color: rgba(255,255,255,0.8); }
+
+        /* =========================================
+           Content Area
+           ========================================= */
+        .main-content {
+            position: relative; z-index: 1; padding: 0 5% 80px;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        .section-divider {
+            width: 60px; height: 3px;
+            background: linear-gradient(90deg, var(--accent-glow), var(--accent-purple));
+            margin: 0 auto 24px;
+            border-radius: 2px;
+        }
+
+        .section-header { text-align: center; margin-bottom: 20px; }
+        .section-header h2 {
+            font-size: 32px; font-weight: 700;
+            letter-spacing: -0.5px; margin-bottom: 8px;
+        }
+        .section-header p { color: var(--text-secondary); font-size: 16px; max-width: 600px; margin: 0 auto; }
+
+        .filters {
+            display: flex; justify-content: center; gap: 10px;
+            margin-bottom: 50px; flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 10px 24px; border-radius: 4px;
+            font-size: 14px; font-weight: 500; cursor: pointer;
+            transition: all 0.3s var(--ease-out-expo);
+            position: relative; overflow: hidden;
+        }
+
+        .filter-btn::after {
+            content: '';
+            position: absolute; top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            transform: scale(0);
+            transition: transform 0.6s var(--ease-out-expo);
+        }
+
+        .filter-btn:hover::after { transform: scale(1); }
+
+        .filter-btn:hover, .filter-btn.active {
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 15px rgba(212, 168, 67, 0.3);
+            background: rgba(212, 168, 67, 0.05);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 28px;
+        }
+
+        .card-container {
+            perspective: 1000px;
+            transition: opacity 0.4s ease, filter 0.4s ease;
+        }
+
+        .card-container.dimmed {
+            opacity: 0.35;
+            filter: blur(1px);
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px; padding: 36px;
+            height: 100%; display: flex; flex-direction: column;
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: box-shadow 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* =========================================
+           Card Breathing Glow
+           ========================================= */
+        @keyframes cardBreathe {
+            0%, 100% {
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3),
+                            0 0 0 rgba(212,168,67,0);
+            }
+            50% {
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3),
+                            0 0 12px rgba(212,168,67,0.06);
+            }
+        }
+
+        .card {
+            animation: cardBreathe 3.5s ease-in-out infinite;
+        }
+
+        .card:hover {
+            animation-play-state: paused;
+        }
+
+        .card-container.dimmed .card {
+            animation-play-state: paused;
+        }
+
+        /* =========================================
+           Button Ripple Effect
+           ========================================= */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(212,168,67,0.25);
+            transform: scale(0);
+            animation: rippleEffect 0.7s ease-out forwards;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes rippleEffect {
+            to { transform: scale(4); opacity: 0; }
+        }
+
+        /* Shimmer sweep */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -100%;
+            width: 50%; height: 200%;
+            background: linear-gradient(
+                105deg,
+                transparent 30%,
+                rgba(255,255,255,0.015) 40%,
+                rgba(255,255,255,0.05) 45%,
+                rgba(255,255,255,0.015) 50%,
+                transparent 60%
+            );
+            transform: skewX(-15deg);
+            transition: left 0.75s ease;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .card:hover::before {
+            left: 150%;
+        }
+
+        .card:hover {
+            border-color: rgba(212, 168, 67, 0.3);
+            box-shadow: 0 20px 50px rgba(212, 168, 67, 0.15);
+        }
+
+        .card-header, .card-desc, .card-tags, .card-btn { transform: translateZ(20px); }
+
+        .card-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 16px; transform: translateZ(40px);
+        }
+
+        .card-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+
+        .card-field {
+            font-size: 11px; color: var(--accent-glow);
+            letter-spacing: 1px;
+            background: rgba(212, 168, 67, 0.1);
+            padding: 5px 12px; border-radius: 20px;
+            border: 1px solid rgba(212, 168, 67, 0.2);
+            white-space: nowrap;
+        }
+
+        .card-desc {
+            color: var(--text-secondary);
+            font-size: 15px; line-height: 1.65;
+            flex-grow: 1; margin-bottom: 24px;
+            transform: translateZ(30px);
+        }
+
+        .card-tags {
+            display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;
+        }
+
+        .tag {
+            font-size: 12px; color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.03);
+            padding: 5px 12px; border-radius: 4px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .tag.highlight-tag {
+            color: var(--accent-glow);
+            border-color: rgba(212, 168, 67, 0.3);
+            background: rgba(212, 168, 67, 0.08);
+        }
+
+        .card-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: transparent; color: var(--accent-glow);
+            text-decoration: none; padding: 12px 0; border-radius: 8px;
+            font-size: 14px; font-weight: 600;
+            border: 1px solid var(--accent-glow);
+            transition: all 0.3s var(--ease-out-expo);
+            position: relative;
+            transform: translateZ(50px) translateY(0);
+        }
+
+        .card-btn:hover {
+            background: var(--accent-glow); color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(212, 168, 67, 0.6);
+            transform: translateZ(50px) translateY(-3px);
+        }
+
+        /* =========================================
+           PPT Slideshow Modal
+           ========================================= */
+        .ppt-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 3, 7, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s var(--ease-out-expo);
+        }
+
+        .ppt-modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .ppt-modal {
+            position: relative;
+            width: min(96vw, 1400px);
+            aspect-ratio: 16 / 9;
+            background: rgba(13, 13, 23, 0.8);
+            border: 1px solid rgba(212, 168, 67, 0.25);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 60px rgba(212, 168, 67, 0.1);
+            transform: scale(0.92);
+            transition: transform 0.45s var(--ease-out-expo);
+        }
+
+        .ppt-modal-overlay.open .ppt-modal {
+            transform: scale(1);
+        }
+
+        .ppt-slide-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .ppt-slide-img.active {
+            display: block;
+            animation: pptFadeIn 0.35s ease;
+        }
+
+        @keyframes pptFadeIn {
+            from { opacity: 0; transform: scale(0.97); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .ppt-modal-close {
+            position: absolute;
+            top: 12px; right: 16px;
+            width: 40px; height: 40px;
+            background: rgba(13, 13, 23, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .ppt-modal-close:hover {
+            background: rgba(212, 168, 67, 0.3);
+            border-color: var(--accent-glow);
+            color: var(--accent-glow);
+            box-shadow: 0 0 16px rgba(212, 168, 67, 0.3);
+        }
+
+        .ppt-nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 44px; height: 44px;
+            background: rgba(13, 13, 23, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 50%;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .ppt-nav-arrow:hover {
+            background: rgba(212, 168, 67, 0.3);
+            border-color: var(--accent-glow);
+            color: var(--accent-glow);
+            box-shadow: 0 0 16px rgba(212, 168, 67, 0.3);
+        }
+
+        .ppt-nav-arrow.prev { left: 12px; }
+        .ppt-nav-arrow.next { right: 12px; }
+
+        .ppt-nav-arrow:active {
+            transform: translateY(-50%) scale(0.9);
+        }
+
+        .ppt-bottom-bar {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 52px;
+            background: linear-gradient(180deg, transparent 0%, rgba(3,3,7,0.8) 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 12px;
+            gap: 16px;
+        }
+
+        .ppt-counter {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .ppt-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .ppt-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.25);
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.3s ease;
+        }
+
+        .ppt-dot.active {
+            background: var(--accent-glow);
+            box-shadow: 0 0 8px rgba(212, 168, 67, 0.5);
+            width: 9px; height: 9px;
+        }
+
+        .ppt-dot:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* =========================================
+           Back to Top
+           ========================================= */
+        .back-to-top {
+            position: fixed;
+            bottom: 32px; right: 32px;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: rgba(13,13,23,0.8);
+            border: 1px solid rgba(212,168,67,0.3);
+            color: var(--accent-glow);
+            cursor: pointer;
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(20px) scale(0.8);
+            transition: all 0.35s var(--ease-out-expo);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            pointer-events: none;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .back-to-top:hover {
+            background: var(--accent-glow);
+            color: var(--bg-dark);
+            box-shadow: 0 0 25px rgba(212,168,67,0.5);
+            border-color: var(--accent-glow);
+        }
+
+        /* =========================================
+           Footer
+           ========================================= */
+        .footer {
+            position: relative; z-index: 1; text-align: center;
+            padding: 60px 5% 40px;
+            border-top: 1px solid var(--glass-border);
+            color: var(--text-secondary); font-size: 14px;
+        }
+
+        .footer strong { color: var(--accent-glow); }
+
+        @media (max-width: 768px) {
+            .hero { min-height: 60vh; }
+            .grid { grid-template-columns: 1fr; }
+            .card { padding: 28px; }
+            .hero-stats { gap: 20px; flex-wrap: wrap; }
+            .nav-links { display: none; }
+            .tab-btn { padding: 12px 24px; font-size: 14px; }
+            .cursor-glow { display: none; }
+            .back-to-top { bottom: 20px; right: 20px; width: 40px; height: 40px; font-size: 18px; }
+            .highlights-track { animation-duration: 20s; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Cursor glow -->
+    <div class="cursor-glow" id="cursor-glow"></div>
+
+    <div id="tsparticles"></div>
+
+    <!-- ==============================================
+    NAV
+    ============================================== -->
+    <nav>
+        <div class="logo">文物智鉴 · ArtiGuide</div>
+        <div class="nav-links">
+            <a onclick="switchTab('sources')">数据来源</a>
+            <a onclick="switchTab('features')">核心功能</a>
+            <a onclick="openPPT()">答辩PPT</a>
+        </div>
+    </nav>
+
+    <!-- ==============================================
+    HERO
+    ============================================== -->
+    <header class="hero" id="hero">
+        <div class="hero-glow"></div>
+
+        <!-- Chinese decorative pattern -->
+        <svg class="hero-pattern" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="transparent"/>
+                    <stop offset="20%" stop-color="#d4a843"/>
+                    <stop offset="80%" stop-color="#d4a843"/>
+                    <stop offset="100%" stop-color="transparent"/>
+                </linearGradient>
+            </defs>
+            <g class="line-group">
+                <!-- Top decorative lines -->
+                <line x1="100" y1="120" x2="400" y2="120" stroke="url(#lineGrad)" stroke-width="0.8"/>
+                <line x1="800" y1="120" x2="1100" y2="120" stroke="url(#lineGrad)" stroke-width="0.8"/>
+                <!-- Small diamond ornaments -->
+                <rect x="395" y="116" width="10" height="10" fill="none" stroke="#d4a843" stroke-width="0.6" transform="rotate(45 400 121)"/>
+                <rect x="795" y="116" width="10" height="10" fill="none" stroke="#d4a843" stroke-width="0.6" transform="rotate(45 800 121)"/>
+                <!-- Bottom decorative lines -->
+                <line x1="100" y1="680" x2="450" y2="680" stroke="url(#lineGrad)" stroke-width="0.8"/>
+                <line x1="750" y1="680" x2="1100" y2="680" stroke="url(#lineGrad)" stroke-width="0.8"/>
+                <rect x="445" y="676" width="10" height="10" fill="none" stroke="#d4a843" stroke-width="0.6" transform="rotate(45 450 681)"/>
+                <rect x="745" y="676" width="10" height="10" fill="none" stroke="#d4a843" stroke-width="0.6" transform="rotate(45 750 681)"/>
+            </g>
+            <g class="line-group">
+                <!-- Secondary subtle arcs -->
+                <path d="M200 200 Q600 160 1000 200" fill="none" stroke="#d4a843" stroke-width="0.4" opacity="0.5"/>
+                <path d="M200 600 Q600 640 1000 600" fill="none" stroke="#d4a843" stroke-width="0.4" opacity="0.5"/>
+                <!-- Corner ornaments -->
+                <circle cx="80" cy="80" r="20" fill="none" stroke="#d4a843" stroke-width="0.5" opacity="0.3"/>
+                <circle cx="80" cy="80" r="12" fill="none" stroke="#d4a843" stroke-width="0.5" opacity="0.3"/>
+                <circle cx="1120" cy="80" r="20" fill="none" stroke="#d4a843" stroke-width="0.5" opacity="0.3"/>
+                <circle cx="1120" cy="80" r="12" fill="none" stroke="#d4a843" stroke-width="0.5" opacity="0.3"/>
+            </g>
+        </svg>
+
+        <h1 id="hero-title">
+            <span>多模态智能检索</span>
+            <span class="highlight">数字人文物讲解</span>
+        </h1>
+        <p id="hero-desc">基于 CLIP ViT-B/32 与 FAISS 向量索引，融合 Live2D 数字人与 GPT-SoVITS 语音克隆，打造沉浸式中华文物鉴赏与智能问答平台。涵盖 1,115 件文物，33 个朝代，30 个类别，支持图文双向跨模态检索。</p>
+        <div class="hero-stats" id="hero-stats">
+            <div class="hero-stat"><div class="num" data-target="1115">0</div><div class="label">文物藏品</div></div>
+            <div class="hero-stat"><div class="num" data-target="33">0</div><div class="label">涵盖朝代</div></div>
+            <div class="hero-stat"><div class="num" data-target="30">0</div><div class="label">文物类别</div></div>
+            <div class="hero-stat"><div class="num" data-target="9004">0</div><div class="label">图文描述（中+英）</div></div>
+        </div>
+        <div class="scroll-hint" onclick="document.getElementById('highlights-banner').scrollIntoView({behavior:'smooth'})">
+            <span>向下滚动探索</span>
+            <div class="arrow"></div>
+        </div>
+    </header>
+
+    <!-- ==============================================
+    HIGHLIGHTS BANNER
+    ============================================== -->
+    <div class="highlights-banner" id="highlights-banner">
+        <div class="highlights-track" id="highlights-track">
+            <span class="highlight-item"><span class="dot"></span>覆盖<strong>33</strong>个朝代</span>
+            <span class="highlight-item"><span class="dot"></span>涵盖<strong>30</strong>个文物类别</span>
+            <span class="highlight-item"><span class="dot"></span><strong>6</strong>大数据采集管线</span>
+            <span class="highlight-item"><span class="dot"></span>双通道<strong>FAISS</strong>向量检索</span>
+            <span class="highlight-item"><span class="dot"></span><strong>Live2D</strong>数字人讲解</span>
+            <span class="highlight-item"><span class="dot"></span><strong>GPT-SoVITS</strong>音色克隆</span>
+            <span class="highlight-item"><span class="dot"></span><strong>5</strong>种可视化探索视图</span>
+            <span class="highlight-item"><span class="dot"></span>情感感知<strong>5</strong>情绪TTS</span>
+            <span class="highlight-item"><span class="dot"></span><strong>14</strong>个API接口</span>
+            <span class="highlight-item"><span class="dot"></span>覆盖<strong>33</strong>个朝代</span>
+            <span class="highlight-item"><span class="dot"></span>涵盖<strong>30</strong>个文物类别</span>
+            <span class="highlight-item"><span class="dot"></span><strong>6</strong>大数据采集管线</span>
+            <span class="highlight-item"><span class="dot"></span>双通道<strong>FAISS</strong>向量检索</span>
+            <span class="highlight-item"><span class="dot"></span><strong>Live2D</strong>数字人讲解</span>
+            <span class="highlight-item"><span class="dot"></span><strong>GPT-SoVITS</strong>音色克隆</span>
+            <span class="highlight-item"><span class="dot"></span><strong>5</strong>种可视化探索视图</span>
+            <span class="highlight-item"><span class="dot"></span>情感感知<strong>5</strong>情绪TTS</span>
+            <span class="highlight-item"><span class="dot"></span><strong>14</strong>个API接口</span>
+        </div>
+    </div>
+
+    <!-- ==============================================
+    TAB SWITCHER
+    ============================================== -->
+    <div class="tab-bar-wrapper" id="tab-bar-wrapper">
+        <div class="tab-bar" id="tab-bar">
+            <div class="tab-slider"></div>
+            <button class="tab-btn active" data-tab="sources">数据集来源</button>
+            <button class="tab-btn" data-tab="features">核心技术特色</button>
+        </div>
+    </div>
+
+    <!-- ==============================================
+    CONTENT
+    ============================================== -->
+    <main class="main-content">
+
+        <div class="tab-panel active" id="panel-sources">
+            <div class="section-divider"></div>
+            <div class="section-header">
+                <h2>数据集来源</h2>
+                <p>六大采集管线，多源异构数据汇聚，构建大规模中华文物多模态数据集</p>
+            </div>
+            <div class="filters" id="source-filters"></div>
+            <div class="grid" id="source-grid"></div>
+        </div>
+
+        <div class="tab-panel" id="panel-features">
+            <div class="section-divider"></div>
+            <div class="section-header">
+                <h2>核心技术特色</h2>
+                <p>多项创新技术，打造沉浸式文物鉴赏与智能讲解体验</p>
+            </div>
+            <div class="filters" id="feature-filters"></div>
+            <div class="grid" id="feature-grid"></div>
+        </div>
+
+    </main>
+
+    <!-- ==============================================
+    BACK TO TOP
+    ============================================== -->
+    <button class="back-to-top" id="back-to-top" aria-label="回到顶部">&#8593;</button>
+
+    <!-- ==============================================
+    FOOTER
+    ============================================== -->
+    <div class="footer">
+        <p>&copy; 2026 <strong>文物智鉴 · ArtiGuide</strong> — 中华文物多模态检索与数字人讲解系统 &nbsp;|&nbsp; 毕业设计作品</p>
+        <p style="margin-top: 8px; font-size: 12px;">
+            基于 CLIP ViT-B/32 &middot; FAISS &middot; Live2D Cubism 4 &middot; GPT-SoVITS &middot; 讯飞 TTS &middot; Ollama + Qwen3 &middot; D3.js &middot; ECharts
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles-confetti@2.12.0/tsparticles.confetti.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <!-- ==============================================
+    PPT SLIDESHOW MODAL
+    ============================================== -->
+    <div class="ppt-modal-overlay" id="ppt-overlay">
+        <div class="ppt-modal" id="ppt-modal">
+            <button class="ppt-modal-close" onclick="closePPT()" aria-label="关闭">&#10005;</button>
+            <button class="ppt-nav-arrow prev" onclick="prevSlide()" aria-label="上一页">&#10094;</button>
+            <button class="ppt-nav-arrow next" onclick="nextSlide()" aria-label="下一页">&#10095;</button>
+            <div id="ppt-slides"></div>
+            <div class="ppt-bottom-bar">
+                <span class="ppt-counter" id="ppt-counter">1 / 17</span>
+                <div class="ppt-dots" id="ppt-dots"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        // =============================================
+        // DATA
+        // =============================================
+        const dataSources = [
+            {
+                name: "百度图片", field: "图片来源",
+                desc: "基于百度图片搜索引擎，按文物名称+朝代关键词批量检索与下载，三阶段流水线产出 934 张高清文物图片。",
+                tags: ["百度图片搜索", "934张图片", "批量下载"],
+                url: "https://image.baidu.com/"
+            },
+            {
+                name: "Wikimedia Commons", field: "图片来源",
+                desc: "按类别爬取 CC 授权中国文物图片（商代青铜器/西周青铜器/唐代陶瓷等 15+ 类别），每类精选高分辨率图片。",
+                tags: ["CC 授权", "15+ 类别", "高分辨率"],
+                url: "https://commons.wikimedia.org/"
+            },
+            {
+                name: "中文维基百科", field: "文本来源",
+                desc: "对每件文物搜索 zh.wikipedia.org，提取中文百科摘要与详细信息，自动回填到主数据集 JSONL。",
+                tags: ["zh.wikipedia.org", "批量检索", "自动回填"],
+                url: "https://zh.wikipedia.org/"
+            },
+            {
+                name: "Wikidata 知识图谱", field: "文本来源",
+                desc: "通过 SPARQL 查询获取文物结构化元数据（年代/材质/器型/出土信息），同时调用英文 Wikipedia API 获取描述。",
+                tags: ["SPARQL", "结构化元数据", "跨语言"],
+                url: "https://www.wikidata.org/"
+            },
+            {
+                name: "讯飞开放平台", field: "语音来源",
+                desc: "讯飞 WebSocket 流式 TTS，3 种中文音色可选，WAV 格式本地缓存，为每件文物预生成讲解语音。",
+                tags: ["流式合成", "3种音色", "本地缓存"],
+                url: "https://www.xfyun.cn/services/online_tts"
+            },
+            {
+                name: "GPT-SoVITS", field: "语音来源",
+                desc: "基于 Few-shot 音色克隆技术，使用芙宁娜角色参考音频训练，复刻目标说话人音色，实现个性化数字人语音。",
+                tags: ["Few-shot", "音色克隆", "芙宁娜"],
+                url: "https://github.com/RVC-Boss/GPT-SoVITS"
+            }
+        ];
+
+        const sourceCategories = ["全部", "图片来源", "文本来源", "语音来源"];
+
+        const features = [
+            {
+                name: "双通道多模态检索", field: "检索技术",
+                desc: "图文双通道 FAISS 向量索引，支持语义搜索、视觉搜索、混合搜索三种融合模式。采用 Prompt Ensemble 为每件文物生成 8 个多语言模板进行均值池化编码。",
+                tags: ["CLIP ViT-B/32", "FAISS", "双索引", "Prompt Ensemble"],
+                url: "https://github.com/openai/CLIP"
+            },
+            {
+                name: "BONUS 领域知识增强", field: "检索技术",
+                desc: "将青铜器类型学注入检索管道：查询命中器型关键词（鼎/尊/簋/觚/卣等）后，匹配候选文物添加领域奖励 +0.06，专家知识驱动重排序。",
+                tags: ["器型匹配", "BONUS +0.06", "重排序"],
+                url: "https://github.com/facebookresearch/faiss"
+            },
+            {
+                name: "Live2D 数字人讲解", field: "数字人",
+                desc: "Live2D Cubism 4 驱动芙宁娜高精度模型（95MB），17 种表情 + 4 种动作。PIXI.js WebGL 实时渲染，Web Audio API FFT 驱动 Lip Sync 嘴部同步。",
+                tags: ["Live2D Cubism 4", "PIXI.js", "Lip Sync"],
+                url: "https://www.live2d.com/en/"
+            },
+            {
+                name: "SVG 多角色系统", field: "数字人",
+                desc: "三款文物拟人角色：绿萝、寒卿（汉代朝臣）、唐韵（唐代仕女）。内建眨眼/浮动动画 + 5 种手势引擎，由讲解关键词实时触发。",
+                tags: ["SVG动画", "手势引擎", "3角色"],
+                url: "https://developer.mozilla.org/en-US/docs/Web/SVG"
+            },
+            {
+                name: "情感感知语音合成", field: "语音交互",
+                desc: "双引擎架构：讯飞 WebSocket + GPT-SoVITS 音色克隆。情感感知引擎识别 5 种情绪，动态调节语速/音调/音量。前端双缓冲预加载 + SessionId 竞态隔离。",
+                tags: ["GPT-SoVITS", "讯飞TTS", "情感感知"],
+                url: "https://github.com/RVC-Boss/GPT-SoVITS"
+            },
+            {
+                name: "五大可视化探索", field: "数据可视化",
+                desc: "D3.js 力导向关系图谱、26 朝代为序的横向时光轴、ECharts 中国地理分布热力图、同器型跨朝代演化链、AI 讲解文案生成（Ollama + Qwen3:1.7b），共五种探索视图。",
+                tags: ["D3.js", "ECharts", "演化链", "AI文案"],
+                url: "https://d3js.org/"
+            }
+        ];
+
+        const featureCategories = ["全部", "检索技术", "数字人", "语音交互", "数据可视化"];
+
+        // =============================================
+        // CURSOR GLOW
+        // =============================================
+        const cursorGlow = document.getElementById('cursor-glow');
+        let mouseX = -1000, mouseY = -1000;
+        let currentX = -1000, currentY = -1000;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            if (!cursorGlow.classList.contains('visible')) {
+                cursorGlow.classList.add('visible');
+            }
+        });
+
+        document.addEventListener('mouseleave', () => {
+            cursorGlow.classList.remove('visible');
+        });
+
+        function animateCursorGlow() {
+            currentX += (mouseX - currentX) * 0.08;
+            currentY += (mouseY - currentY) * 0.08;
+            cursorGlow.style.left = currentX + 'px';
+            cursorGlow.style.top = currentY + 'px';
+            requestAnimationFrame(animateCursorGlow);
+        }
+        animateCursorGlow();
+
+        // =============================================
+        // TSParticles
+        // =============================================
+        let tsparticlesInstance = null;
+
+        const particleColors = {
+            sources: { particle: "#d4a843", link: "#d4a843" },
+            features: { particle: "#3aaf7c", link: "#3aaf7c" }
+        };
+
+        tsParticles.load("tsparticles", {
+            fpsLimit: 120,
+            particles: {
+                number: { value: 80, density: { enable: true, area: 800 } },
+                color: { value: "#d4a843" },
+                shape: { type: "circle" },
+                opacity: { value: 0.5, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                size: { value: 1, random: true },
+                links: { enable: true, distance: 150, color: "#d4a843", opacity: 0.2, width: 1 },
+                move: { enable: true, speed: 1, direction: "none", random: true, straight: false, outModes: "out" }
+            },
+            interactivity: {
+                events: { onHover: { enable: true, mode: "grab" }, onclick: { enable: true, mode: "push" } },
+                modes: { grab: { distance: 200, links: { opacity: 0.5 } } }
+            },
+            detectRetina: true
+        }).then(container => {
+            tsparticlesInstance = container;
+        });
+
+        function updateParticlesColor(tabName) {
+            if (!tsparticlesInstance) return;
+            const colors = particleColors[tabName];
+            const options = tsparticlesInstance.options;
+            options.particles.color.value = colors.particle;
+            options.particles.links.color = colors.link;
+
+            // Smooth color transition by refreshing
+            tsparticlesInstance.refresh();
+        }
+
+        // =============================================
+        // TITLE CHARACTER SPLIT
+        // =============================================
+        function splitTitleChars() {
+            const title = document.getElementById('hero-title');
+            const spans = title.querySelectorAll('span');
+            spans.forEach(span => {
+                const text = span.textContent;
+                span.textContent = '';
+                [...text].forEach(char => {
+                    const charSpan = document.createElement('span');
+                    charSpan.className = 'char';
+                    charSpan.textContent = char;
+                    charSpan.style.opacity = '0';
+                    span.appendChild(charSpan);
+                });
+            });
+            title.style.opacity = '1';
+        }
+
+        function animateTitleChars() {
+            gsap.to('#hero-title .char', {
+                opacity: 1,
+                y: 0,
+                rotateX: 0,
+                duration: 0.9,
+                stagger: { each: 0.035, from: 'start' },
+                ease: 'back.out(1.4)',
+                overwrite: true
+            });
+        }
+
+        // =============================================
+        // MAGNETIC HOVER
+        // =============================================
+        function initMagneticHover(grid) {
+            const containers = grid.querySelectorAll('.card-container');
+            containers.forEach(container => {
+                const card = container.querySelector('.card');
+                if (!card) return;
+
+                container.addEventListener('mousemove', (e) => {
+                    const rect = container.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    const strength = 0.04;
+                    container.style.transform = `translate(${x * strength}px, ${y * strength}px)`;
+                });
+
+                container.addEventListener('mouseleave', () => {
+                    container.style.transition = 'transform 0.6s cubic-bezier(0.19, 1, 0.22, 1)';
+                    container.style.transform = 'translate(0, 0)';
+                });
+
+                container.addEventListener('mouseenter', () => {
+                    container.style.transition = 'transform 0.15s ease-out';
+                });
+            });
+        }
+
+        // =============================================
+        // GLOBAL RIPPLE EFFECT (event delegation)
+        // =============================================
+        function initRippleEffect() {
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('button, .card-btn, .filter-btn, .tab-btn, .back-to-top');
+                if (!btn) return;
+
+                const existing = btn.querySelector('.ripple');
+                if (existing) existing.remove();
+
+                const ripple = document.createElement('span');
+                ripple.className = 'ripple';
+                const rect = btn.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height) * 1.6;
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+                ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+                btn.appendChild(ripple);
+                ripple.addEventListener('animationend', () => ripple.remove());
+            });
+        }
+
+        // =============================================
+        // RENDER HELPERS
+        // =============================================
+        function renderFilterBar(containerId, categories, activeFilter, onChangeFn) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = categories.map(cat => `
+                <button class="filter-btn ${cat === activeFilter ? 'active' : ''}" data-category="${cat}">
+                    ${cat}
+                </button>
+            `).join('');
+            container.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => onChangeFn(btn.dataset.category));
+            });
+        }
+
+        function renderCardGrid(gridId, data, btnLabel) {
+            const grid = document.getElementById(gridId);
+            grid.innerHTML = data.map(item => `
+                <div class="card-container">
+                    <div class="card" data-tilt data-tilt-max="10" data-tilt-speed="1000" data-tilt-glare data-tilt-max-glare="0.2">
+                        <div class="card-header">
+                            <div class="card-title">${item.name}</div>
+                            <div class="card-field">${item.field}</div>
+                        </div>
+                        <div class="card-desc">${item.desc}</div>
+                        <div class="card-tags">
+                            ${item.tags.map((tag, i) => `<span class="tag ${i === 0 ? 'highlight-tag' : ''}">${tag}</span>`).join('')}
+                        </div>
+                        <a href="${item.url}" target="_blank" rel="noopener" class="card-btn">${btnLabel} →</a>
+                    </div>
+                </div>
+            `).join('');
+
+            initCardTilt(grid);
+            initSpotlight(grid);
+            initScrollReveal(grid);
+            initMagneticHover(grid);
+        }
+
+        function initCardTilt(grid) {
+            VanillaTilt.init(grid.querySelectorAll(".card"), {
+                max: 10, speed: 1000, glare: true, "max-glare": 0.2, gyroscope: true
+            });
+        }
+
+        // =============================================
+        // SPOTLIGHT: dim other cards on hover
+        // =============================================
+        function initSpotlight(grid) {
+            const containers = grid.querySelectorAll('.card-container');
+            containers.forEach(container => {
+                container.addEventListener('mouseenter', () => {
+                    containers.forEach(c => {
+                        if (c !== container) c.classList.add('dimmed');
+                    });
+                });
+                container.addEventListener('mouseleave', () => {
+                    containers.forEach(c => c.classList.remove('dimmed'));
+                });
+            });
+        }
+
+        // =============================================
+        // SCROLL REVEAL
+        // =============================================
+        function initScrollReveal(grid) {
+            const containers = grid.querySelectorAll('.card-container');
+            containers.forEach((container, i) => {
+                // Reset any existing animation state
+                gsap.set(container, { clearProps: "all" });
+                container.style.opacity = '0';
+
+                gsap.fromTo(container,
+                    { opacity: 0, y: 50, rotateX: -6, scale: 0.93 },
+                    {
+                        opacity: 1, y: 0, rotateX: 0, scale: 1,
+                        duration: 0.85,
+                        delay: i * 0.06,
+                        ease: "power4.out",
+                        scrollTrigger: {
+                            trigger: container,
+                            start: "top bottom-=60px",
+                            toggleActions: "play none none reverse",
+                            // markers: false
+                        }
+                    }
+                );
+            });
+        }
+
+        // =============================================
+        // TAB LOGIC
+        // =============================================
+        let activeTab = 'sources';
+        let sourceFilter = "全部";
+        let featureFilter = "全部";
+        let isSwitching = false;
+
+        function switchTab(tabName) {
+            if (isSwitching || tabName === activeTab) return;
+            isSwitching = true;
+
+            const oldPanel = document.getElementById('panel-' + activeTab);
+            const newPanel = document.getElementById('panel-' + tabName);
+            const oldGrid = oldPanel.querySelector('.grid');
+            const tabBar = document.getElementById('tab-bar');
+
+            // Update buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabName);
+            });
+
+            // Slide indicator
+            if (tabName === 'features') {
+                tabBar.classList.add('slide-right');
+            } else {
+                tabBar.classList.remove('slide-right');
+            }
+
+            // Update particle colors
+            updateParticlesColor(tabName);
+
+            // Phase 1: OUT
+            const oldCards = oldGrid.querySelectorAll('.card-container');
+            gsap.to(oldCards, {
+                opacity: 0, y: -30, scale: 0.92,
+                duration: 0.35, stagger: 0.03, ease: "power3.in",
+                onComplete: () => {
+                    // Kill old ScrollTriggers
+                    killScrollTriggersIn(oldGrid);
+
+                    // Phase 2: Swap
+                    oldPanel.classList.remove('active');
+                    newPanel.classList.add('active');
+
+                    // Phase 3: Render & reveal
+                    if (tabName === 'sources') {
+                        refreshSources(false);
+                    } else {
+                        refreshFeatures(false);
+                    }
+
+                    const newGrid = newPanel.querySelector('.grid');
+
+                    // Animate section header
+                    gsap.fromTo(newPanel.querySelector('.section-header, .filters'),
+                        { opacity: 0, y: 15 },
+                        { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }
+                    );
+
+                    activeTab = tabName;
+                    setTimeout(() => { isSwitching = false; }, 450);
+                }
+            });
+        }
+
+        // =============================================
+        // ScrollTrigger Cleanup
+        // =============================================
+        function killScrollTriggersIn(container) {
+            ScrollTrigger.getAll().forEach(st => {
+                if (container.contains(st.trigger) || st.trigger === container) {
+                    st.kill();
+                }
+            });
+        }
+
+        // =============================================
+        // SECTION REFRESH
+        // =============================================
+        function refreshSources(animate = true) {
+            const filtered = sourceFilter === "全部"
+                ? dataSources
+                : dataSources.filter(item => item.field === sourceFilter);
+
+            renderFilterBar("source-filters", sourceCategories, sourceFilter, (cat) => {
+                sourceFilter = cat;
+                refreshSourcesWithAnim();
+            });
+
+            renderCardGrid("source-grid", filtered, "访问数据源");
+        }
+
+        function refreshSourcesWithAnim() {
+            const grid = document.getElementById('source-grid');
+            const cards = grid.querySelectorAll('.card-container');
+            killScrollTriggersIn(grid);
+            gsap.to(cards, {
+                opacity: 0, y: 20, duration: 0.25, stagger: 0.04,
+                onComplete: () => refreshSources(true)
+            });
+        }
+
+        function refreshFeatures(animate = true) {
+            const filtered = featureFilter === "全部"
+                ? features
+                : features.filter(item => item.field === featureFilter);
+
+            renderFilterBar("feature-filters", featureCategories, featureFilter, (cat) => {
+                featureFilter = cat;
+                refreshFeaturesWithAnim();
+            });
+
+            renderCardGrid("feature-grid", filtered, "了解技术详情");
+        }
+
+        function refreshFeaturesWithAnim() {
+            const grid = document.getElementById('feature-grid');
+            const cards = grid.querySelectorAll('.card-container');
+            killScrollTriggersIn(grid);
+            gsap.to(cards, {
+                opacity: 0, y: 20, duration: 0.25, stagger: 0.04,
+                onComplete: () => refreshFeatures(true)
+            });
+        }
+
+        // =============================================
+        // BACK TO TOP
+        // =============================================
+        const backToTopBtn = document.getElementById('back-to-top');
+
+        function updateBackToTop() {
+            const shouldShow = window.scrollY > window.innerHeight * 0.7;
+            backToTopBtn.classList.toggle('visible', shouldShow);
+        }
+
+        window.addEventListener('scroll', updateBackToTop, { passive: true });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // =============================================
+        // PPT SLIDESHOW
+        // =============================================
+        // ========== PPT 配置区域 ==========
+        // 用户请修改以下配置：
+        // 1. 将你的PPT导出为图片（PNG/JPG格式）
+        // 2. 将图片放入 ./ppt/ 文件夹
+        // 3. 图片命名为 1.png, 2.png, 3.png ... 或使用自定义名称数组
+        // 4. 修改 PPT_TOTAL 为你的图片总数
+        const PPT_TOTAL = 0;  // ← 修改为你的PPT图片总数
+        const PPT_PATH = './ppt/';  // ← PPT图片存放路径
+        const PPT_IMAGES = [];  // ← 可选：自定义图片文件名数组，如 ['slide1.png', 'slide2.jpg']，留空则使用 1.png ~ N.png
+        // ========== 配置区域结束 ==========
+
+        let pptCurrent = 0;
+        let pptSlides = [];
+        let pptDots = [];
+
+        function buildPPTSlides() {
+            const container = document.getElementById('ppt-slides');
+            const dotsContainer = document.getElementById('ppt-dots');
+            container.innerHTML = '';
+            dotsContainer.innerHTML = '';
+
+            if (PPT_TOTAL === 0) {
+                // 未配置PPT时显示提示
+                container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.5);font-size:18px;text-align:center;padding:40px;">请将PPT图片放入 ./ppt/ 文件夹<br>并修改 perform.html 中的 PPT_TOTAL 配置</div>';
+                return;
+            }
+
+            for (let i = 0; i < PPT_TOTAL; i++) {
+                const img = document.createElement('img');
+                img.className = 'ppt-slide-img';
+                img.src = PPT_PATH + (PPT_IMAGES[i] || (i + 1) + '.png');
+                img.alt = '幻灯片 ' + (i + 1);
+                img.loading = 'lazy';
+                container.appendChild(img);
+                pptSlides.push(img);
+
+                const dot = document.createElement('button');
+                dot.className = 'ppt-dot';
+                dot.setAttribute('aria-label', '第' + (i + 1) + '页');
+                dot.addEventListener('click', () => goToSlide(i));
+                dotsContainer.appendChild(dot);
+                pptDots.push(dot);
+            }
+        }
+
+        function openPPT(index = 0) {
+            if (pptSlides.length === 0) buildPPTSlides();
+            pptCurrent = index;
+            updatePPTSlide();
+            document.getElementById('ppt-overlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePPT() {
+            document.getElementById('ppt-overlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function nextSlide() {
+            pptCurrent = (pptCurrent + 1) % PPT_TOTAL;
+            updatePPTSlide();
+        }
+
+        function prevSlide() {
+            pptCurrent = (pptCurrent - 1 + PPT_TOTAL) % PPT_TOTAL;
+            updatePPTSlide();
+        }
+
+        function goToSlide(index) {
+            pptCurrent = index;
+            updatePPTSlide();
+        }
+
+        function updatePPTSlide() {
+            pptSlides.forEach((s, i) => s.classList.toggle('active', i === pptCurrent));
+            pptDots.forEach((d, i) => d.classList.toggle('active', i === pptCurrent));
+            document.getElementById('ppt-counter').textContent = (pptCurrent + 1) + ' / ' + PPT_TOTAL;
+        }
+
+        // Keyboard & overlay click
+        document.addEventListener('keydown', (e) => {
+            const overlay = document.getElementById('ppt-overlay');
+            if (!overlay.classList.contains('open')) return;
+            if (e.key === 'ArrowRight') nextSlide();
+            else if (e.key === 'ArrowLeft') prevSlide();
+            else if (e.key === 'Escape') closePPT();
+        });
+
+        document.getElementById('ppt-overlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closePPT();
+        });
+
+        // Preload first few slides
+        function preloadPPTSlides() {
+            for (let i = 1; i <= Math.min(3, PPT_TOTAL); i++) {
+                const link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = 'image';
+                link.href = PPT_PATH + i + '.png';
+                document.head.appendChild(link);
+            }
+        }
+
+        // =============================================
+        // COUNT-UP ANIMATION
+        // =============================================
+        function animateCountUp() {
+            const nums = document.querySelectorAll('.hero-stat .num');
+            nums.forEach(el => {
+                const target = parseInt(el.dataset.target);
+                const format = target >= 1000
+                    ? (v) => Math.round(v).toLocaleString()
+                    : (v) => Math.round(v);
+
+                gsap.fromTo(el,
+                    { textContent: 0 },
+                    {
+                        textContent: target,
+                        duration: 2.2,
+                        ease: "power2.out",
+                        snap: { textContent: 1 },
+                        onUpdate: function() {
+                            el.textContent = format(this.targets()[0].textContent);
+                        },
+                        delay: 0.3
+                    }
+                );
+            });
+        }
+
+        // =============================================
+        // INIT
+        // =============================================
+        function initPage() {
+            // Split title into individual characters
+            splitTitleChars();
+
+            // Hero animation
+            const tl = gsap.timeline();
+            tl.from("nav", { y: -100, opacity: 0, duration: 1, ease: "power4.out" });
+
+            // Character-by-character title animation
+            gsap.set('#hero-title .char', { y: 60, rotateX: -90 });
+            tl.call(animateTitleChars, null, "-=0.5");
+
+            tl.to("#hero-desc", { opacity: 1, y: 0, duration: 1, ease: "power4.out" }, "-=0.6");
+            tl.to("#hero-stats", { opacity: 1, y: 0, duration: 1, ease: "power4.out" }, "-=0.6");
+
+            // Count-up after stats appear
+            animateCountUp();
+
+            // Banner fade in
+            tl.fromTo("#highlights-banner",
+                { opacity: 0, y: -10 },
+                { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" },
+                "-=0.2"
+            );
+
+            // Tab bar fade in
+            tl.fromTo("#tab-bar-wrapper",
+                { opacity: 0, y: 20 },
+                { opacity: 1, y: 0, duration: 0.7, ease: "power4.out" },
+                "-=0.1"
+            );
+
+            // Initial render
+            refreshSources(false);
+
+            // Fade in section header
+            gsap.fromTo('#panel-sources .section-header, #panel-sources .filters',
+                { opacity: 0, y: 20 },
+                { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }
+            );
+
+            // Hero parallax
+            gsap.to(".hero", {
+                scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
+                opacity: 0, scale: 0.9, y: 100
+            });
+
+            // Tab button handlers
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+            });
+
+            // Nav link handlers
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const target = link.textContent.includes('数据') ? 'sources' : 'features';
+                    switchTab(target);
+                    document.getElementById('tab-bar-wrapper').scrollIntoView({ behavior: 'smooth' });
+                });
+            });
+
+            // Initial back-to-top state
+            updateBackToTop();
+
+            // Initialize global button ripple effect
+            initRippleEffect();
+        }
+
+        window.addEventListener('load', initPage);
+    </script>
+</body>
+</html>
