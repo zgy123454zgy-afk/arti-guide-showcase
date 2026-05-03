@@ -1,44 +1,54 @@
 # PPT 图片配置说明
 
-## 使用方法
+这个目录用于存放答辩 PPT 导出的图片。页面会读取这里的图片，并在 `perform.html` 的全屏 PPT 弹窗中播放。
 
-1. 将你的 PPT / 演示文稿导出为图片格式（PNG 或 JPG）
-2. 将所有图片放入此文件夹 (`./ppt/`)
-3. 图片按顺序命名为：
-   - `1.png`, `2.png`, `3.png` ...
-   - 或者使用自定义名称
+## 推荐流程
 
-4. 打开 `perform.html`，找到以下配置区域并修改：
+1. 在 PowerPoint、WPS 或 Keynote 中将演示文稿导出为图片。
+2. 推荐格式：`PNG`，比例：`16:9`，尺寸：`1920x1080`。
+3. 将导出的图片放入当前目录。
+4. 在 `perform.html` 中修改 PPT 配置。
 
-```javascript
-// ========== PPT 配置区域 ==========
-const PPT_TOTAL = 0;  // ← 修改为你的PPT图片总数
-const PPT_PATH = './ppt/';  // ← PPT图片存放路径
-const PPT_IMAGES = [];  // ← 可选：自定义图片文件名数组
-// ========== 配置区域结束 ==========
+## 默认命名方式
+
+如果图片命名为：
+
+```text
+1.png
+2.png
+3.png
+...
 ```
 
-## 示例
-
-如果你有 10 张 PPT 图片，命名为 `slide1.png` 到 `slide10.png`：
-
-```javascript
-const PPT_TOTAL = 10;
-const PPT_PATH = './ppt/';
-const PPT_IMAGES = ['slide1.png', 'slide2.png', 'slide3.png', 'slide4.png', 'slide5.png',
-                    'slide6.png', 'slide7.png', 'slide8.png', 'slide9.png', 'slide10.png'];
-```
-
-或者使用默认命名 `1.png` ~ `10.png`：
+只需要设置图片总数：
 
 ```javascript
 const PPT_TOTAL = 10;
 const PPT_PATH = './ppt/';
-const PPT_IMAGES = [];  // 留空则自动使用 1.png ~ 10.png
+const PPT_IMAGES = [];
 ```
 
-## 图片建议
+## 自定义命名方式
 
-- 推荐使用 PNG 格式以保持最佳画质
-- 推荐 16:9 比例（如 1920x1080）
-- 文件大小建议控制在 2MB 以内以保证加载速度
+如果你希望使用自定义文件名，例如：
+
+```text
+cover.png
+dataset.png
+retrieval.png
+demo.png
+```
+
+可以这样配置：
+
+```javascript
+const PPT_TOTAL = 4;
+const PPT_PATH = './ppt/';
+const PPT_IMAGES = ['cover.png', 'dataset.png', 'retrieval.png', 'demo.png'];
+```
+
+## 注意事项
+
+- `PPT_TOTAL` 必须和实际展示的图片数量一致。
+- 图片过大可能影响加载速度，建议单张控制在 2MB 以内。
+- 如果暂时不放 PPT 图片，保持 `PPT_TOTAL = 0`，页面会展示未配置提示，不会报错。

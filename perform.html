@@ -164,6 +164,12 @@
             opacity: 0; transform: translateY(30px);
         }
 
+        .no-motion-fallback .hero p,
+        .no-motion-fallback .hero-stats {
+            opacity: 1;
+            transform: none;
+        }
+
         .hero-stat { text-align: center; }
         .hero-stat .num {
             font-size: 40px; font-weight: 800;
@@ -557,6 +563,30 @@
             animation: pptFadeIn 0.35s ease;
         }
 
+        .ppt-empty-state {
+            height: 100%;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            color: rgba(255, 255, 255, 0.72);
+            text-align: center;
+            line-height: 1.7;
+        }
+
+        .ppt-empty-state strong {
+            color: var(--accent-glow);
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .ppt-empty-state span {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
         @keyframes pptFadeIn {
             from { opacity: 0; transform: scale(0.97); }
             to { opacity: 1; transform: scale(1); }
@@ -620,6 +650,11 @@
 
         .ppt-nav-arrow:active {
             transform: translateY(-50%) scale(0.9);
+        }
+
+        .ppt-modal:not(.has-slides) .ppt-nav-arrow,
+        .ppt-modal:not(.has-slides) .ppt-dots {
+            display: none;
         }
 
         .ppt-bottom-bar {
@@ -901,14 +936,50 @@
             <button class="ppt-nav-arrow next" onclick="nextSlide()" aria-label="下一页">&#10095;</button>
             <div id="ppt-slides"></div>
             <div class="ppt-bottom-bar">
-                <span class="ppt-counter" id="ppt-counter">1 / 17</span>
+                <span class="ppt-counter" id="ppt-counter">未配置</span>
                 <div class="ppt-dots" id="ppt-dots"></div>
             </div>
         </div>
     </div>
 
     <script>
-        gsap.registerPlugin(ScrollTrigger);
+        (function initLibraryFallbacks() {
+            const noop = () => {};
+            const callComplete = (vars) => {
+                if (vars && typeof vars.onComplete === 'function') vars.onComplete();
+            };
+
+            if (!window.gsap) {
+                document.documentElement.classList.add('no-motion-fallback');
+                window.gsap = {
+                    registerPlugin: noop,
+                    set: noop,
+                    to: (target, vars) => { callComplete(vars); return target; },
+                    fromTo: (target, fromVars, toVars) => { callComplete(toVars); return target; },
+                    timeline: () => ({
+                        to() { return this; },
+                        from() { return this; },
+                        fromTo() { return this; },
+                        call(fn) {
+                            if (typeof fn === 'function') fn();
+                            return this;
+                        }
+                    })
+                };
+            }
+
+            if (!window.VanillaTilt) {
+                window.VanillaTilt = { init: noop };
+            }
+
+            if (!window.tsParticles) {
+                window.tsParticles = { load: () => Promise.resolve(null) };
+            }
+        })();
+
+        if (window.ScrollTrigger && window.gsap && typeof gsap.registerPlugin === 'function') {
+            gsap.registerPlugin(ScrollTrigger);
+        }
 
         // =============================================
         // DATA
@@ -1307,6 +1378,7 @@
         // ScrollTrigger Cleanup
         // =============================================
         function killScrollTriggersIn(container) {
+            if (!window.ScrollTrigger || typeof ScrollTrigger.getAll !== 'function') return;
             ScrollTrigger.getAll().forEach(st => {
                 if (container.contains(st.trigger) || st.trigger === container) {
                     st.kill();
@@ -1400,15 +1472,20 @@
         function buildPPTSlides() {
             const container = document.getElementById('ppt-slides');
             const dotsContainer = document.getElementById('ppt-dots');
+            const modal = document.getElementById('ppt-modal');
             container.innerHTML = '';
             dotsContainer.innerHTML = '';
+            pptSlides = [];
+            pptDots = [];
 
-            if (PPT_TOTAL === 0) {
-                // 未配置PPT时显示提示
-                container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.5);font-size:18px;text-align:center;padding:40px;">请将PPT图片放入 ./ppt/ 文件夹<br>并修改 perform.html 中的 PPT_TOTAL 配置</div>';
+            if (PPT_TOTAL <= 0) {
+                modal.classList.remove('has-slides');
+                document.getElementById('ppt-counter').textContent = '未配置';
+                container.innerHTML = '<div class="ppt-empty-state"><strong>答辩 PPT 尚未配置</strong><span>将导出的 PNG/JPG 放入 ./ppt/，并在 perform.html 中设置 PPT_TOTAL 后即可启用全屏播放。</span></div>';
                 return;
             }
 
+            modal.classList.add('has-slides');
             for (let i = 0; i < PPT_TOTAL; i++) {
                 const img = document.createElement('img');
                 img.className = 'ppt-slide-img';
@@ -1429,8 +1506,10 @@
 
         function openPPT(index = 0) {
             if (pptSlides.length === 0) buildPPTSlides();
-            pptCurrent = index;
-            updatePPTSlide();
+            if (PPT_TOTAL > 0) {
+                pptCurrent = Math.max(0, Math.min(index, PPT_TOTAL - 1));
+                updatePPTSlide();
+            }
             document.getElementById('ppt-overlay').classList.add('open');
             document.body.style.overflow = 'hidden';
         }
@@ -1441,21 +1520,28 @@
         }
 
         function nextSlide() {
+            if (PPT_TOTAL <= 0) return;
             pptCurrent = (pptCurrent + 1) % PPT_TOTAL;
             updatePPTSlide();
         }
 
         function prevSlide() {
+            if (PPT_TOTAL <= 0) return;
             pptCurrent = (pptCurrent - 1 + PPT_TOTAL) % PPT_TOTAL;
             updatePPTSlide();
         }
 
         function goToSlide(index) {
+            if (PPT_TOTAL <= 0) return;
             pptCurrent = index;
             updatePPTSlide();
         }
 
         function updatePPTSlide() {
+            if (PPT_TOTAL <= 0) {
+                document.getElementById('ppt-counter').textContent = '未配置';
+                return;
+            }
             pptSlides.forEach((s, i) => s.classList.toggle('active', i === pptCurrent));
             pptDots.forEach((d, i) => d.classList.toggle('active', i === pptCurrent));
             document.getElementById('ppt-counter').textContent = (pptCurrent + 1) + ' / ' + PPT_TOTAL;
@@ -1480,7 +1566,7 @@
                 const link = document.createElement('link');
                 link.rel = 'preload';
                 link.as = 'image';
-                link.href = PPT_PATH + i + '.png';
+                link.href = PPT_PATH + (PPT_IMAGES[i - 1] || i + '.png');
                 document.head.appendChild(link);
             }
         }
